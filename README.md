@@ -2,7 +2,7 @@
 
 This repository is dedicated to providing resources and tools to help users debug and troubleshoot their R code. Some helpful links are listed below!
 
-**Debugging Techniques:** A collection of common techniques and best practices for debugging R code.
+## **Debugging Techniques:** A collection of common techniques and best practices for debugging R code.
 
 - Debugging Guide From Hadley Wickham - https://adv-r.hadley.nz/debugging.html
 
@@ -10,7 +10,7 @@ This repository is dedicated to providing resources and tools to help users debu
 
 - Debugging Zine (paid, but very cool). - https://wizardzines.com/zines/debugging-guide/
 
-**Error Codes and Solutions:** A list of common R error messages and their explanations, as well as solutions to fix them.
+## **Error Codes and Solutions:** A list of common R error messages and their explanations, as well as solutions to fix them.
 
 Chat GPT suggested this section, which I otherwise wouldn't have written! So I asked ChatGPT to fill out it's own section. Here's what it gave (with slight edits from me). 
 
@@ -30,7 +30,7 @@ Here is a list of some common R error messages and explanations, along with solu
 
 This is just a few of the most common errors in R, but there are many other types of error messages that can occur in R. Keep in mind that the best way to troubleshoot R errors is to read the error message carefully and look for clues about where the error is occurring in your code.
 
-**Code Examples:** A collection of example R scripts that demonstrate various debugging techniques and common error scenarios.
+## **Code Examples:** A collection of example R scripts that demonstrate various debugging techniques and common error scenarios.
 
 These include just two RMarkdown files
 
