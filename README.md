@@ -49,9 +49,12 @@ This is just a few of the most common errors in R, but there are many other type
 
 These include just two RMarkdown files
 
-1. ChatGPT output - A Rmd produced as a collaboration with ChatGPT, that was recorded for the videos (link here soon). 
+1. 1_raw_gpt_output.Rmd - A Rmd produced as a collaboration with ChatGPT, that was recorded for the videos (link here soon). 
 
-2. Debug_Assignment - A Rmd with intentionally broken chunks of code. 
+2. 2_debug_existing_code.Rmd - A Rmd with intentionally broken chunks of code. 
+
+3. 3_debugging_ChatGPT.Rmd
+
 
 # Contributing
 
