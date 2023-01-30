@@ -11,9 +11,6 @@ editor_options:
   chunk_output_type: console
 ---
 
-
-
-
 # Debugging
 
 Learning how to debug code is a lifelong project, but you have to start somewhere.
@@ -63,15 +60,12 @@ library(knitr) #Makes nice tables
 library(kableExtra) #Makes even nicer tables
 library(lubridate) #Makes working with dates easier
 library(ggthemes) #Makes plots prettier
-library(tidyrr) #Makes multiple simultaneous models easier
-
-
+library(tidyr) #Makes multiple simultaneous models easier
 ```
 
 # Downloading data.
 
 For this lab, we'll explore water quality data in the Colorado River basin as it moves from Colorado to Arizona. All data will be generated through the code you see below, with the only external information coming from knowing the SiteID's for the monitoring locations along the Colorado River and the water quality characteristic names. 
-
 
 The water quality portal can be accessed with the command `readWQPdata`, which takes a variety of parameters (like startdate, enddate, constituents, etc...). We'll generate these rules for downloading the data here. 
 
@@ -162,20 +156,17 @@ We also need to download some site info so we can know where these sites are.
 
 
 ```{r site info download}
-#In addition to concentration informatino, we probably want to know some things about the sites
+#In addition to concentration information, we probably want to know some things about the sites
 #dplyr::select can help us only keep site information that is useful. 
 
 site.info <- whatWQPsites(siteid=colorado$sites) %>%
   dplyr::select(SiteID=MonitoringLocationIdentifier,
-                  name=MonitoringLocationName
+                  name=MonitoringLocationName,
                   area=DrainageAreaMeasure.MeasureValue,
                   area.units=DrainageAreaMeasure.MeasureUnitCode,
                   lat=LatitudeMeasure,
                   long=LongitudeMeasure) %>%
   distinct() #Distinct just keeps the first of any duplicates. 
-
-
-
 ```
 
 
@@ -194,11 +185,11 @@ head(site.info)
 This dataset looks nice because it has all the information we need and nothing extra. Now let's look at the concentration data. 
 
 ```{r conc data}
+library(kableExtra)
 head(conc.long) %>%
   kable(.,'html') %>%
   kable_styling() %>%
   scroll_box(width='800px,height=300px')
-  
 ```
 
 
@@ -208,7 +199,7 @@ Wow that looks messy! Lots of extraneous columns, lots of NAs, so much informati
 
 ```{r tidying up concentration}
 #This code mostly just grabs and renames the most important data columns
-conc.clean <-  conc.long 
+conc.clean <-  conc.long %>%
                   dplyr::select(date=ActivityStartDate,
                          parameter=CharacteristicName,
                          units=ResultMeasure.MeasureUnitCode,
@@ -227,7 +218,7 @@ conc.clean <-  conc.long
                          fraction=ResultSampleFractionText,
                          status=ResultStatusIdentifier) %>%
   #Remove trailing white space in labels
-  mutate(units = trimws(units) %>%
+  mutate(units = trimws(units)) %>%
   #Keep only samples that are water samples
   filter(media=='Water') #Some of these snuck through!
 
@@ -238,7 +229,7 @@ Now let's look at the tidier version
 head(conc.clean) %>%
   kable(.,'html') %>%
   kable_styling() %>%
-  scroll_box(width='800px'',height='300px')
+  scroll_box(width='800px', height='300px')
 ```
 
 ## Final tidy dataset
@@ -256,15 +247,14 @@ Wow! Almost all the data is in mg/L. That makes our job really easy.
 We just need to remove these observations with a `dplyr::filter` call and then select an even smaller subset of useful columns, while adding a time object column using the `lubridate::ymd` call. 
 
 ```{r tidy}
+library(lubridate)
 conc.tidy <- conc.clean %>% 
-  filter(units == 'tons/day') %>%
+  filter(units != 'tons/day') %>%
   mutate(date=ymd(date)) %>%
   select(date,
          parameter,
          SiteID,
          conc=value)
-
-
 ```
 
 ### Daily data
@@ -272,15 +262,12 @@ conc.tidy <- conc.clean %>%
 Okay now we have a manageable data frame. But how do we want to organize the data? Since we are looking at a really long time-series of data (70 years), let's look at data as a daily average. The `dplyr::group_by and summarize` commands make this really easy
 
 ```{r daily}
-
-
 #The amazing group_by function groups all the data so that the summary
 #only applies to each subgroup (site, date, and parameter combination).
 #So in the end you get a daily average concentration for each site and parameter type. 
 conc.daily <- conc.tidy %>%
   group_by(date,parameter,SiteID) %>% 
   summarize(conc_mean = mean(conc,na.rm=T))
-
 ```
 
 Taking daily averages looks like it did eliminate `r nrow(conc.tidy) - nrow(conc.daily)` observations, meaning these site date combinations had multiple observations on the same day. 
@@ -295,10 +282,16 @@ Now we have a 'tidy' dataset. Let's look at the data we have. First where is the
 Here we use the `sf` package to project the site information data into a GIS type data object called a `simple feature (sf)`. The function `st_as_sf` converts the long (x) and lat (y) coordinates into a projected point feature with the EPSG code 4326 (WGS 84). We can then use the `mapview` package and function to look at where these sites are. 
 
 ```{r}
-#convert site info as an sf object
-site.sf <- site.info %>%
-  st_as_sf(., coords=c('long','lat')
+install.packages("mapview")
+```
 
+```{r}
+#convert site info as an sf object
+
+library(mapview)
+
+site.sf <- site.info %>%
+  st_as_sf(., coords=c('long','lat'))
 
 mapview(site.sf)
 
@@ -316,13 +309,11 @@ Now that we know where the data is coming from let's look at the actual data we 
 To keep the plots simple at first let's look at calcium data by site. 
 
 ```{r daily plot}
-
 conc.daily %>%
   filter(parameter == 'Calcium') %>%
   ggplot(.,aes(x=date,y=conc_mean)) + 
   geom_point() + 
   facet_wrap(~SiteID)
-  
 ```
 
 Okay that's a lot of data! Maybe too much. Let's focus in on sites with only continuous datasets and then summarize the data by year
@@ -332,14 +323,11 @@ Okay that's a lot of data! Maybe too much. Let's focus in on sites with only con
 Let's shrink the dataset to only look at annual change. 
 
 ```{r annual only}
-
 conc.annual <- conc.daily %>%
   mutate(year=year(date)) %>%
   group_by(SiteID,year,parameter) %>%
-  summarize(annual_mean=mean(conc_median,na.rm=T),
+  summarize(annual_mean=mean(conc_mean,na.rm=T),
             annual_var=var(conc_mean,na.rm=T))
-  
-
 ```
 
 ### Plot of all the annual data.
@@ -360,13 +348,14 @@ Having the points colored by SiteID is not super useful, unless you have memoriz
 
 
 ```{r pretty,fig.width=9,fig.height=7}
+library(ggthemes)
 conc.annual %>%
   left_join(colorado %>%
               rename(SiteID=sites),by='SiteID') %>%
   ggplot(.,aes(x=year,y=annual_mean,color=basin)) + 
-  geom_points() + 
+  geom_point() + 
   facet_wrap(~parameter, scales='free') + 
-  theme_fews() + 
+  theme_few() + 
   scale_color_few() + 
   theme(legend.position=c(.7,.15)) + 
   guides(color=guide_legend(ncol=2))
@@ -383,7 +372,7 @@ conc.annual %>%
   filter(annual_var < 5000) %>%
   ggplot(.,aes(x=year,y=annual_var,color=area)) + 
   geom_point() + 
-  facet_wraps(~parameter,scales='free') + 
+  facet_wrap(~parameter,scales='free') + 
   theme_few() + 
   theme(legend.position=c(.7,.15)) 
 ```
