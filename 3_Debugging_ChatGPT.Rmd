@@ -2,7 +2,9 @@
 title: "ChatGPT Analysis of Mean Discharge in a River"
 author: "Matt Ross"
 date: "2023-01-23"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 # ChatGPT, the analyst
@@ -30,8 +32,127 @@ changing?
 
 ## Data Download
 
+## Install the 'tidyverse' package
+install.packages("tidyverse")
+
+```{r, error = TRUE}
+# Download the 'tidyverse' package
+
+## ChatGPT asked me here to download tidyverse. I already have tidyverse downloaded. Not breaking R.
+
+# Load the 'tidyverse' package
+library(tidyverse)
+
+# Download the data
+data <- read.csv("https://waterdata.usgs.gov/nwis/dv?cb_00060=on&format=rdb&site_no=06730200&referred_module=sw&period=&begin_date=1990-01-01&end_date=2022-12-31")
+
+# Clean up the data
+data_cleaned <- data %>% 
+  filter(!is.na(data$discharge)) %>% 
+  mutate(date = as.Date(data$datetime, format = "%Y-%m-%d")) %>% 
+  select(date, discharge)
+
+# Write the data to a CSV file
+write.csv(data_cleaned, file = "CacheLaPoudreRiver_Discharge_1990-2022.csv")
+
+# This code will download the data from the USGS website, clean up the data by removing missing values and converting the date column to the Date class, and then write the cleaned data to a CSV file.
+```
+
+Fixing this. ChatGPT downloaded an absolutely awful ".csv" file from USGS for Boulder Creek. I decided to just download the thing myself using the dataRetrieval package.
+
+```{r}
+# Load the 'tidyverse' package
+library(tidyverse)
+
+# Load the dataRetrieval package
+library(dataRetrieval)
+
+# PoudreRiverData
+PoudreRiverData <- readNWISdv("06752260", "00060", "1990-01-01", "2023-01-01")
+```
+
+```{r}
+# Cleaning up the data
+PoudreRiverData <- PoudreRiverData %>%
+  mutate('Streamflow' = X_00060_00003) %>%
+  filter(!is.na(Streamflow))
+```
+
 ## Data analysis and visualization
+
+```{r, error = TRUE}
+library(tidyverse)
+
+# Load the data
+data <- read.csv("Cache_La_Poudre_River_Fort_Collins_Colorado_discharge.csv")
+
+# Filter the data for summer months (June 21 - Sept 21)
+summer_data <- data %>%
+  filter(month(as.Date(date)) >= 6 & month(as.Date(date)) <= 9 & day(as.Date(date)) >= 21)
+
+# Group the data by year
+summer_data_by_year <- summer_data %>%
+  group_by(year = year(as.Date(date))) %>%
+  summarize(mean_flow = mean(discharge))
+
+# Plot the data
+ggplot(summer_data_by_year, aes(x = year, y = mean_flow)) +
+  geom_line() +
+  ggtitle("Summertime Annual Mean Flow of Cache La Poudre River in Fort Collins, Colorado") +
+  xlab("Year") +
+  ylab("Summertime Annual Mean Flow (cfs)")
+
+# Note: In this code, the tidyverse library is used to perform the data filtering, grouping, and summarizing operations. The ggplot function is used to create the plot, with the x and y aesthetics specifying the year and summertime mean flow variables, respectively. The geom_line function is used to add a line to the plot, and the ggtitle, xlab, and ylab functions are used to add the title, x-axis label, and y-axis label to the plot, respectively.
+```
+
+Doing this in multiple code chunks just to have redundancy. Might clean this code up later, hehe.
+
+```{r}
+# ChatGPT did not use the 'separate' function properly.
+PoudreRiverDataCleaned <- PoudreRiverData %>%
+  separate(col = Date, into = c("year","month", "day"), sep = "-")
+```
+
+```{r}
+PoudreRiverMonthDay <- PoudreRiverDataCleaned %>%
+    unite(col = MonthDay, month, day, sep = "")
+```
+
+```{r}
+PoudreRiverMonthDay$MonthDay <- as.numeric(PoudreRiverMonthDay$MonthDay)
+```
+
+```{r}
+PoudreRiverSummerData <- PoudreRiverMonthDay %>%
+  filter(MonthDay >= 621, MonthDay <= 921)
+```
+
+```{r}
+Summerized <- PoudreRiverSummerData %>%
+  group_by(year) %>%
+  summarise(SummerAvg = mean(Streamflow))
+```
+
+```{r}
+Summerized$year <- as.Date(Summerized$year, format = "%Y")
+```
+
+```{r}
+ggplot(Summerized, aes(x = year, y = SummerAvg)) +
+  geom_smooth(color = "lightblue", fill = "lightblue") +
+  geom_point(color = "darkblue") +
+  labs(title = "Average Summer Streamflow in the Cache la Poudre River, 1990-2022", subtitle = "USGS Station 6752260, Fort Collins, Colorado", x = "Year", y = "Streamflow (cfs)") +
+  theme_light()
+```
 
 ## Model output
 
+To determine if summer annual mean discharge is changing over time, you can fit a linear regression model to the summertime mean flow data. You would need to install and load the necessary packages in R, such as tidyverse or lm() function from base R. Then, you would create a linear model with the summertime mean flow as the response variable and year as the predictor. Finally, you can use the summary() function to get a summary of the model, including the p-value of the t-test for the slope coefficient. If the p-value is less than a significance level (e.g. 0.05), then you can conclude that there is evidence that the summertime mean discharge is changing over time.
+
+## Very well explained.
+
 ## Bonus - why linear models are dangerous time-series analysis tools. 
+
+A linear model assumes a straight line relationship between the independent and dependent variables. However, in some cases the relationship may not be linear, in which case a linear model would not accurately reflect the true relationship. This can result in a poor fit and unreliable results. For example, if the discharge data shows a non-linear relationship with summer annual mean discharge, a linear model may not capture the true relationship and would not be a suitable choice for this analysis. It may be necessary to use a non-linear model or a different type of analysis that better captures the relationship between the independent and dependent variables.
+
+## Way wordier than I would have put it, but basically correct - Ben
